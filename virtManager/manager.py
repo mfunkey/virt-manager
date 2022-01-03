@@ -121,6 +121,7 @@ class vmmManager(vmmGObjectUI):
             "on_menu_file_close_activate": self.close,
             "on_vmm_close_clicked": self.close,
             "on_vm_open_clicked": self.show_vm,
+            "on_vm_open_lg_clicked": self.open_lg,
             "on_vm_run_clicked": self.start_vm,
             "on_vm_new_clicked": self.new_vm,
             "on_vm_shutdown_clicked": self.poweroff_vm,
@@ -434,6 +435,30 @@ class vmmManager(vmmGObjectUI):
             return None
         return _walk(self.model, self.model.get_iter_first(), conn_or_vm)
 
+    def get_shm_file(self):
+        vm = self.current_vm()
+        if vm:
+            xmlobj = vm.get_xmlobj(refresh_if_nec=False)
+            for arg in xmlobj.xmlns_qemu.args:
+                if "memory-backend-file" in arg.value:
+                    value = arg.value.split(',')
+                    for val in value:
+                        v = val.split('=')
+                        if v[0] == "mem-path":
+                            return v[1]
+            for shm in xmlobj.devices.shmem:
+                if shm.type == "ivshmem-plain":
+                    return f"/dev/shm/{shm.name}"
+        return None
+
+    def get_spice_socket(self):
+        vm = self.current_vm()
+        xmlobj = vm.get_xmlobj(refresh_if_nec=False)
+
+        for graphic in xmlobj.devices.graphics:
+            if graphic.type == "spice":
+                return graphic
+        return None
 
     ####################
     # Action listeners #
@@ -471,6 +496,24 @@ class vmmManager(vmmGObjectUI):
 
     def show_vm(self, _src):
         vmmenu.VMActionUI.show(self, self.current_vm())
+
+    def open_lg(self, _src):
+        spice = self.get_spice_socket()
+        if spice is None:
+            self.err.show_err("No spice socket found!")
+            return
+        listen = spice._listen
+        port = spice._port
+        log.debug(f"Using spice socket: {listen}:{port}")
+
+        kvmfr = self.get_shm_file()
+        if kvmfr is None:
+            self.err.show_err("No shared memory device found!")
+            return
+        log.debug(f"Using shared memory device: {kvmfr}")
+
+        import subprocess
+        subprocess.Popen(f"looking-glass-client -f {kvmfr} -c {listen} -p {port}", shell=True)
 
     def row_activated(self, _src, *args):
         ignore = args
@@ -785,8 +828,14 @@ class vmmManager(vmmGObjectUI):
         if vm and vm.managedsave_supported:
             self.change_run_text(vm.has_managed_save())
 
+        if self.get_shm_file() is None:
+            show_open_lg = False
+        else:
+            show_open_lg = True
+
         self.widget("vm-open").set_sensitive(show_open)
         self.widget("vm-run").set_sensitive(show_run)
+        self.widget("vm-open-lg").set_sensitive(show_open_lg)
         self.widget("vm-shutdown").set_sensitive(show_shutdown)
         self.widget("vm-shutdown").get_menu().update_widget_states(vm)
 
