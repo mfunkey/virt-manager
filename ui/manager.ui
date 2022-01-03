@@ -325,6 +325,22 @@
                   </packing>
                 </child>
                 <child>
+                  <object class="GtkToolButton" id="vm-open-lg">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="has_tooltip">True</property>
+                    <property name="tooltip_text" translatable="yes">Run the looking glass client</property>
+                    <property name="label" translatable="yes">LG</property>
+                    <property name="use_underline">True</property>
+                    <property name="icon_name">lg</property>
+                    <signal name="clicked" handler="on_vm_open_lg_clicked" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="homogeneous">True</property>
+                  </packing>
+                </child>
+                <child>
                   <object class="GtkToolButton" id="vm-run">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
