@@ -828,7 +828,7 @@ class vmmManager(vmmGObjectUI):
         if vm and vm.managedsave_supported:
             self.change_run_text(vm.has_managed_save())
 
-        if self.get_shm_file() is None:
+        if self.get_shm_file() is None or show_run:
             show_open_lg = False
         else:
             show_open_lg = True
